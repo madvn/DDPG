@@ -6,3 +6,5 @@ Lillicrap, Timothy P., Jonathan J. Hunt, Alexander Pritzel, Nicolas Heess, Tom E
 https://arxiv.org/abs/1509.02971
 
 Modify and/or run [ddpg/run_train.py](https://github.com/madvn/DDPG/blob/master/ddpg/run_train.py)
+
+**Status:** Compiles and runs but doesn't improve performance. Any help appreciated :)

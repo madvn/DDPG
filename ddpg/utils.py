@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+
 def neural_network(
             input,
             layer_sizes,

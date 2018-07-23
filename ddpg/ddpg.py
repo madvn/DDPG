@@ -7,8 +7,7 @@ from replay_buffer import ReplayBuffer
 class DDPG:
 
     def __init__(self,
-                  hidden_size,
-                  num_layers,
+                  hidden_layers,
                   obs_dims,
                   action_dims,
                   actor_lr,
@@ -17,6 +16,7 @@ class DDPG:
                   tau,
                   batch_size=1000,
                   buffer_size=10000,
+                  action_gain=1,
     ):
         self.obs_dims = obs_dims
         self.action_dims = action_dims
@@ -32,19 +32,19 @@ class DDPG:
         with tf.variable_scope('ddpg'):
             # creating the main actor and main critic networks
             with tf.variable_scope('main') as vs:
-                self.main = ActorCritic(hidden_size,
-                                              num_layers,
+                self.main = ActorCritic(hidden_layers,
                                               obs_dims,
                                               action_dims,
+                                              action_gain,
                                               )
                 vs.reuse_variables()
 
             # creating the target actor and target critic networks
             with tf.variable_scope('target') as vs:
-                self.target = ActorCritic(hidden_size,
-                                              num_layers,
+                self.target = ActorCritic(hidden_layers,
                                               obs_dims,
                                               action_dims,
+                                              action_gain,
                                               )
                 vs.reuse_variables()
 
@@ -184,7 +184,7 @@ class DDPG:
 
             # items used:
                 #1. target_actor_output for s_t+1 in minibatch
-                #2. target_critic output for s_t+1 and target_actor_output from 1
+                #2. target_critic output for (s_t+1 and target_actor_output from 1)
                 #3. main_critic_output using s_t and a_t from minibatch
                 #4. rewards from minibatch
                 #5. not(done from minibatch)

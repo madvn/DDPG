@@ -1,4 +1,4 @@
-# DDPG
+# DDPG [Work in progress]
 
 Implementing algorithm from 
 

@@ -6,9 +6,9 @@ from collections import deque
 import random
 import numpy as np
 
-class ReplayBuffer(object):
 
-    def __init__(self, buffer_size, random_seed=123):
+class ReplayBuffer(object):
+    def __init__(self, buffer_size, random_seed=None):
         """
         The right side of the deque contains the most recent experiences
         """
@@ -47,3 +47,12 @@ class ReplayBuffer(object):
     def clear(self):
         self.buffer.clear()
         self.count = 0
+
+
+if __name__ == "__main__":
+    buf = ReplayBuffer(100)
+    for _ in range(200):
+        # adding random [s, a, r, t, s']
+        buf.add([np.random.rand(i) for i in [4,1,1,1,4]])
+
+    print(buf.sample_batch(5))

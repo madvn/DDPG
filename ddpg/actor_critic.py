@@ -1,63 +1,110 @@
-import tensorflow as tf
 import numpy as np
-from utils import neural_network
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.initializers import RandomUniform
 
-class ActorCritic:
 
-    def __init__(self,
-                  hidden_layers,
-                  obs_dims,
-                  action_dims,
-                  action_gain,
-                  ):
+class Critic:
+    def __init__(self, obs_dim, action_dim, learning_rate=0.001):
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
+        self.model = self.make_network()
+        self.optimizer = keras.optimizers.Adam(learning_rate)
+        # self.model.compile(loss="mse", optimizer=self.optimizer)
 
-        # placeholders for observation and action
-        self.obs_pl = tf.placeholder(tf.float32, shape=(None,obs_dims), name='obs_pl')
-        self.action_pl = tf.placeholder(tf.float32, shape=(None, action_dims), name='action_pl')
+    def make_network(self):
+        obs_input = keras.Input(shape=self.obs_dim, dtype="float32", name="obs")
+        action_input = keras.Input(
+            shape=self.action_dim, dtype="float32", name="action"
+        )
 
-        # designing the actor network
-        with tf.variable_scope('actor') as vs:
-            # Weight initializers - layer 1
-            magnitude = np.sqrt(obs_dims)
-            initializers = [tf.random_uniform_initializer(minval=-1/magnitude,maxval=1/magnitude)]
-            # Weight initializers - hidden layers
-            magnitudes = np.sqrt(hidden_layers)
-            initializers += [tf.random_uniform_initializer(minval=-1/magnitudes[i],maxval=1/magnitudes[i]) for i in range(len(hidden_layers))]
+        # layer 0 - with obs input
+        w_range = 1 / np.sqrt(self.obs_dim)
+        lr_0 = keras.layers.Dense(
+            400,
+            activation="relu",
+            name="c_lr_0",
+            kernel_initializer=RandomUniform(-w_range, w_range),
+        )(obs_input)
 
-            # creating a feed-forward neural network with observation as input and tanh activated action_dim outputs
-            self.actor = action_gain*tf.tanh(neural_network(self.obs_pl,
-                                            hidden_layers + [action_dims],
-                                            name='actor',
-                                            initializers=initializers
-                                            ))
+        # layer 1 with concatenated input of [lr_0, action]
+        lr_1_input = keras.layers.concatenate([lr_0, action_input])
+        w_range = 1 / np.sqrt(400.0)
+        lr_1 = keras.layers.Dense(
+            300,
+            activation="relu",
+            name="c_lr_1",
+            kernel_initializer=RandomUniform(-w_range, w_range),
+        )(lr_1_input)
 
-        # to train critic
-        with tf.variable_scope('critic') as vs:
-            # Weight initializers - layer 1
-            magnitude = np.sqrt(obs_dims)
-            initializer = tf.random_uniform_initializer(minval=-1/magnitude,maxval=1/magnitude)
+        # final layers with linear activation
+        w_range = 0.003
+        q_val = keras.layers.Dense(
+            1,
+            activation="linear",
+            name="q_val",
+            kernel_initializer=RandomUniform(-w_range, w_range),
+        )(lr_1)
 
-            # creating just one layer of the critic first with
-                #1. obsevation as input and
-                #2. batch_normalization
-            self.critic_lr1 = tf.nn.relu(tf.layers.batch_normalization(
-                                            tf.layers.dense(inputs=self.obs_pl,
-                                                units=hidden_layers[0],
-                                                reuse=None,
-                                                kernel_initializer=initializer,
-                                                name='critic_obs_layer',
-                                                )))
+        model = keras.Model(inputs=[obs_input, action_input], outputs=q_val)
+        return model
 
-            # Weight initializers - hidden layers
-            magnitudes = np.sqrt(hidden_layers)
-            initializers = [tf.random_uniform_initializer(minval=-1/magnitudes[i],maxval=1/magnitudes[i]) for i in range(len(hidden_layers))]
+    def estimate_q(self, obs, action):
+        return self.model.predict([obs, action])
 
-            # concatenating the action input to the output of layer 1 critic as input to layer 2 of critic
-            self.critic = neural_network(tf.concat([self.critic_lr1,self.action_pl],1),
-                                            hidden_layers[1:] + [1],
-                                            name='critic',
-                                            reuse=None,
-                                            initializers=initializers
-                                            )
-            # partial derivative of critic with respect to actions - to train the actor
-            self.actor_training_signal = tf.gradients(self.critic, self.action_pl, stop_gradients=[self.obs_pl])
+
+class Actor:
+    def __init__(self, obs_dim, action_dim, action_gain, learning_rate=0.0001):
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
+        self.action_gain = action_gain
+        self.model = self.make_network()
+        self.optimizer = keras.optimizers.Adam(learning_rate)
+
+    def make_network(self):
+        obs_input = keras.Input(shape=self.obs_dim, dtype="float32", name="obs")
+
+        # layer 0 - with obs input
+        w_range = 1 / np.sqrt(self.obs_dim)
+        lr_0 = keras.layers.Dense(
+            400,
+            activation="relu",
+            name="a_lr_0",
+            kernel_initializer=RandomUniform(-w_range, w_range),
+        )(obs_input)
+
+        # layer 1
+        w_range = 1 / np.sqrt(400.0)
+        lr_1 = keras.layers.Dense(
+            300,
+            activation="relu",
+            name="a_lr_1",
+            kernel_initializer=RandomUniform(-w_range, w_range),
+        )(lr_0)
+
+        # action layer
+        w_range = 0.003
+        action = self.action_gain * keras.layers.Dense(
+            self.action_dim,
+            activation="tanh",
+            name="action",
+            kernel_initializer=RandomUniform(-w_range, w_range),
+        )(lr_1)
+
+        model = keras.Model(inputs=obs_input, outputs=action)
+        return model
+
+    def act(self, obs):
+        return self.model.predict(obs)
+
+
+if __name__ == "__main__":
+    actor = Actor(4, 1, 2)
+    critic = Critic(4, 1)
+
+    obs = np.random.rand(4)
+    action = actor.act([[obs]])[0]
+    q_val = critic.estimate_q([obs], [action])[0]
+
+    print("\nRandom actor-critic output for obs={}:".format(obs))
+    print("Action: {}, Qval: {}".format(action, q_val))

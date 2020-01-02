@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -107,6 +108,13 @@ class DDPG:
         processed_batch["t"] = batch[3]
         processed_batch["next_s"] = batch[4]
         return processed_batch
+
+    def save_model(self, save_dir):
+        """ saves the main and target networks"""
+        self.actor.model.save_weights(os.path.join(save_dir, "actor"))
+        self.critic.model.save_weights(os.path.join(save_dir, "critic"))
+        self.target_actor.model.save_weights(os.path.join(save_dir, "target_actor"))
+        self.target_critic.model.save_weights(os.path.join(save_dir, "target_critic"))
 
 
 if __name__ == "__main__":

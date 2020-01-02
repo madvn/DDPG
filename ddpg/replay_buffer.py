@@ -53,6 +53,6 @@ if __name__ == "__main__":
     buf = ReplayBuffer(100)
     for _ in range(200):
         # adding random [s, a, r, t, s']
-        buf.add([np.random.rand(i) for i in [4,1,1,1,4]])
+        buf.add([np.random.rand(i) for i in [4, 1, 1, 1, 4]])
 
     print(buf.sample_batch(5))

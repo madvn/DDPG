@@ -1,4 +1,4 @@
-# DDPG [Work in progress]
+# DDPG
 
 Implementing algorithm from
 
@@ -8,3 +8,17 @@ https://arxiv.org/abs/1509.02971
 Modify and/or run [ddpg/trainer.py](https://github.com/madvn/DDPG/blob/master/ddpg/trainer.py)
 
 Dependencies: Tensorflow r2.0, numpy, matplotlib, gym
+
+
+### Results
+
+From 10 runs of [ddpg/trainer.py](https://github.com/madvn/DDPG/blob/master/ddpg/trainer.py) as is
+
+<img src="https://github.com/madvn/DDPG/blob/master/ddpg/results/pendulum/pendulum_training_curves.png"/>
+
+#### TODO
+
+- [ ] noiseless evals every X training episodes
+- [ ] parametrize network architecture
+- [ ] better hyperparams for Pendulum
+- [ ] more tasks

@@ -10,15 +10,16 @@ Modify and/or run [ddpg/trainer.py](https://github.com/madvn/DDPG/blob/master/dd
 Dependencies: Tensorflow r2.0, numpy, matplotlib, gym
 
 
-### Results
-
-From 10 runs of [ddpg/trainer.py](https://github.com/madvn/DDPG/blob/master/ddpg/trainer.py) as is
-
-<img src="https://github.com/madvn/DDPG/blob/master/ddpg/results/pendulum/pendulum_training_curves.png"/>
-
 #### TODO
 
 - [ ] noiseless evals every X training episodes
 - [ ] parametrize network architecture
 - [ ] better hyperparams for Pendulum
 - [ ] more tasks
+
+
+### Results
+
+From 10 runs of [ddpg/trainer.py](https://github.com/madvn/DDPG/blob/master/ddpg/trainer.py) as is
+
+<img src="https://github.com/madvn/DDPG/blob/master/ddpg/results/pendulum/pendulum_training_curves.png"/>

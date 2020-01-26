@@ -7,6 +7,30 @@ from ddpg import DDPG
 from replay_buffer import ReplayBuffer
 from utils import OrnsteinUhlenbeckActionNoise
 
+def run_episode(learner, env, noise, buffer, train_flag=True, batch_size=64):
+    epi_rwd = 0
+    s = env.reset()
+    done = False
+    # run episode and train
+    while not done:
+        # act and get feedback
+        a = learner.act(s)
+        if noise:
+            a += noise()
+        next_s, r, done, _ = env.step(a)
+
+        # record feedback
+        epi_rwd += r
+
+        # train
+        if train_flag:
+            buffer.add([s, a, r, done, next_s])
+            if buffer.size() >= batch_size:
+                batch = buffer.sample_batch(batch_size)
+                learner.update_networks(batch)
+
+        s = next_s
+    return epi_rwd
 
 def train(
     env,
@@ -14,7 +38,7 @@ def train(
     critic_learning_rate=0.001,
     gamma=0.99,
     tau=0.001,
-    max_episodes=500,
+    max_episodes=100,
     buffer_size=1000000,
     batch_size=64,
     plot_flag=True,
@@ -48,28 +72,15 @@ def train(
 
     # train
     for e in range(max_episodes):
-        epi_rwd = 0
-        s = env.reset()
-        done = False
-
-        # run episode and train
-        while not done:
-            # act and get feedback
-            a = learner.act(s) + noise()
-            next_s, r, done, _ = env.step(a)
-
-            # record feedback and train
-            epi_rwd += r
-            buffer.add([s, a, r, done, next_s])
-            if buffer.size() >= batch_size:
-                batch = buffer.sample_batch(batch_size)
-                learner.update_networks(batch)
-
-            s = next_s
-
-        if verbose or (e + 1) % 50 == 0:
-            print("Episode # {} | Total reward = {}".format(e + 1, epi_rwd))
-        epi_rwds.append(epi_rwd)
+        run_episode(learner, env, noise, buffer, batch_size=64)
+        if e%10 == 0:
+            # testing without noise at the end of each epoch
+            # one epoch = 10 episodes
+            e_rwds = 0
+            for _ in range(10):
+                e_rwds += run_episode(learner, env, None, buffer, train_flag=False)
+            print("End of epoch # {} | {} training episodes completed | Total reward = {}".format(e//5, e, e_rwds/10))
+            epi_rwds.append(e_rwds/10)
 
     # save trained model
     if save_dir:

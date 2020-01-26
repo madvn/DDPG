@@ -18,7 +18,7 @@ From 10 runs of [ddpg/trainer.py](https://github.com/madvn/DDPG/blob/master/ddpg
 
 #### TODO
 
-- [ ] noiseless evals every X training episodes
+- [x] noiseless evals every X training episodes
 - [ ] parametrize network architecture
 - [ ] better hyperparams for Pendulum
 - [ ] more tasks

@@ -35,79 +35,56 @@ class DDPG:
     def act(self, obs):
         return self.actor.act([[obs]])[0]
 
+    @tf.function
     def update_networks(self, batch):
         """ runs all updates from provided training batch """
-        batch = self._prep_batch(batch)
+        s, a, r, t, next_s = (tf.cast(i, tf.float32) for i in batch)
+        self.update_critic(s, a, r, next_s)
+        self.update_actor(s, a, r, next_s)
+        self.update_target(self.actor.model, self.target_actor.model)
+        self.update_target(self.critic.model, self.target_critic.model)
 
-        self.update_critic(batch)
-        self.update_actor(batch)
-        self.target_actor.model = self.update_target(
-            self.actor.model, self.target_actor.model
-        )
-        self.target_critic.model = self.update_target(
-            self.critic.model, self.target_critic.model
-        )
-
-    def update_critic(self, batch):
+    @tf.function
+    def update_critic(self, s, a, r, next_s):
         """ minimize td-loss from target """
         # td estimate based on targets' behavior
-        target_future_actions = self.target_actor.act(batch["next_s"])
-        target_future_qs = self.target_critic.estimate_q(
-            batch["next_s"], target_future_actions
-        )
-        target_current_qs = batch["r"] + self.gamma * target_future_qs
-
-        # main critic's td estimate and loss
-        with tf.GradientTape() as tape:
-            model_vars = self.critic.model.trainable_variables
-            tape.watch(model_vars)
-            main_current_qs = self.critic.model([batch["s"], batch["a"]])
-            loss = keras.losses.mse(target_current_qs, main_current_qs)
+        target_future_actions = self.target_actor.act(next_s)
+        target_future_qs = self.target_critic.estimate_q(next_s, target_future_actions)
+        target_current_qs = r + self.gamma * target_future_qs
 
         # update main critic
-        dloss_dcrit = tape.gradient(loss, model_vars)
+        main_current_qs = self.critic.model([s, a])
+        loss = keras.losses.mse(target_current_qs, main_current_qs)
+
+        model_vars = self.critic.model.trainable_variables
+
+        dloss_dcrit = tf.gradients(loss, model_vars)
         self.critic.optimizer.apply_gradients(zip(dloss_dcrit, model_vars))
 
-    def update_actor(self, batch):
+    @tf.function
+    def update_actor(self, s, a, r, next_s):
         """ dq_dtheta = dq_da * da_dtheta"""
         # first, finding dq_da
-        with tf.GradientTape() as tape:
-            a = self.actor.model(batch["s"])
-            q = self.critic.model([batch["s"], a])
-        dq_da = tape.gradient(q, a)
+        proposed_a = self.actor.model(s)
+        q = self.critic.model([s, proposed_a])
+        dq_da = tf.gradients(q, proposed_a)[0]
 
-        # second, finding da_dtheta
-        with tf.GradientTape() as tape:
-            model_vars = self.actor.model.trainable_variables
-            tape.watch(model_vars)
-            a = self.actor.model(batch["s"])
-        da_dtheta = tape.gradient(a, model_vars, output_gradients=-dq_da)
+        # second, finding dq_da * da_dtheta
+        model_vars = self.actor.model.trainable_variables
+        dq_dtheta = tf.gradients(proposed_a, model_vars, grad_ys=-dq_da)
 
         # updating the model
-        self.actor.optimizer.apply_gradients(zip(da_dtheta, model_vars))
+        self.actor.optimizer.apply_gradients(zip(dq_dtheta, model_vars))
 
+    @tf.function
     def update_target(self, main_model, target_model):
         """ target = tau*main + (1-tau)*target """
-        new_weights = list(map(lambda x: self.tau * x, main_model.get_weights()))
-        new_weights = list(
-            map(
-                lambda x: x[0] + (1 - self.tau) * x[1],
-                list(zip(new_weights, target_model.get_weights())),
+        for model_weight, target_weight in zip(
+            main_model.weights, target_model.weights
+        ):
+            target_weight.assign(
+                self.tau * model_weight + (1 - self.tau) * target_weight
             )
-        )
-        target_model.set_weights(new_weights)
-        return target_model
-
-    def _prep_batch(self, batch):
-        """ converts sample from buffer to dict for easy feed_dicting"""
-        # batch = np.transpose(batch)
-        processed_batch = {}
-        processed_batch["s"] = batch[0]
-        processed_batch["a"] = batch[1]
-        processed_batch["r"] = batch[2]
-        processed_batch["t"] = batch[3]
-        processed_batch["next_s"] = batch[4]
-        return processed_batch
 
     def save_model(self, save_dir):
         """ saves the main and target networks"""

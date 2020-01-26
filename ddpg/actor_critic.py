@@ -50,7 +50,7 @@ class Critic:
         return model
 
     def estimate_q(self, obs, action):
-        return self.model.predict([obs, action])
+        return self.model([obs, action])
 
 
 class Actor:
@@ -95,7 +95,7 @@ class Actor:
         return model
 
     def act(self, obs):
-        return self.model.predict(obs)
+        return self.model(tf.reshape(obs, (-1, self.obs_dim)))
 
 
 if __name__ == "__main__":

@@ -50,6 +50,8 @@ class Critic:
         return model
 
     def estimate_q(self, obs, action):
+        obs = tf.reshape(obs, (-1, self.obs_dim))
+        action = tf.reshape(action, (-1, self.action_dim))
         return self.model([obs, action])
 
 
@@ -95,7 +97,8 @@ class Actor:
         return model
 
     def act(self, obs):
-        return self.model(tf.reshape(obs, (-1, self.obs_dim)))
+        obs = tf.reshape(obs, (-1, self.obs_dim))
+        return self.model(obs)
 
 
 if __name__ == "__main__":
@@ -103,8 +106,8 @@ if __name__ == "__main__":
     critic = Critic(4, 1)
 
     obs = np.random.rand(4)
-    action = actor.act([[obs]])[0]
-    q_val = critic.estimate_q([obs], [action])[0]
+    action = actor.act(obs)
+    q_val = critic.estimate_q(obs, action)
 
     print("\nRandom actor-critic output for obs={}:".format(obs))
     print("Action: {}, Qval: {}".format(action, q_val))

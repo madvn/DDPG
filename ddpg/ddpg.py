@@ -33,7 +33,7 @@ class DDPG:
         self.target_critic.model.set_weights(self.critic.model.get_weights())
 
     def act(self, obs):
-        return self.actor.act([[obs]])[0]
+        return self.actor.act(obs)[0]
 
     @tf.function
     def update_networks(self, batch):
@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     # testing action
     obs = np.ones(4)
-    action = learner.act(obs)
+    action = learner.act(obs)[0]
     print("Action for ones: ", action)
 
     # testing update

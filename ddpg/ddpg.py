@@ -106,7 +106,7 @@ if __name__ == "__main__":
     # testing action
     obs = np.ones(4)
     action = learner.act(obs)[0]
-    print("Action for ones: ", action)
+    print("Action for ones: {}".format(action)) # converts tensor to numpy array
 
     # testing update
     print("Updating... ", end="")

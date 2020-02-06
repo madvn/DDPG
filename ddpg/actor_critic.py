@@ -49,6 +49,7 @@ class Critic:
         model = keras.Model(inputs=[obs_input, action_input], outputs=q_val)
         return model
 
+    @tf.function
     def estimate_q(self, obs, action):
         obs = tf.reshape(obs, (-1, self.obs_dim))
         action = tf.reshape(action, (-1, self.action_dim))
@@ -96,6 +97,7 @@ class Actor:
         model = keras.Model(inputs=obs_input, outputs=action)
         return model
 
+    @tf.function
     def act(self, obs):
         obs = tf.reshape(obs, (-1, self.obs_dim))
         return self.model(obs)
@@ -108,6 +110,7 @@ if __name__ == "__main__":
     obs = np.random.rand(4)
     action = actor.act(obs)
     q_val = critic.estimate_q(obs, action)
+    #action_np_array = action.numpy()
 
     print("\nRandom actor-critic output for obs={}:".format(obs))
     print("Action: {}, Qval: {}".format(action, q_val))
